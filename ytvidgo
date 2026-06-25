@@ -40,6 +40,10 @@ yt-dlp -f "best[height<=480]/best" -o "$OUTPUT_FILE" "$URL"
 if [ $? -eq 0 ]; then
     echo ""
     echo "[*] Download complete!"
+    echo "[*] Preparing audio track..."
+    AUDIO_FILE="yt_audio_$(date +%s).mka"
+    ffmpeg -i "$OUTPUT_FILE" -vn -c:a copy "$AUDIO_FILE" -y -v quiet
+    
     echo "[*] Starting terminal playback..."
     echo "[*] Press 'Ctrl+C' at any time to quit."
     sleep 2
@@ -54,6 +58,7 @@ import subprocess
 ASCII_CHARS = [" ", ".", ":", "-", "=", "+", "*", "#", "%", "@"]
 
 video_filename = sys.argv[1]
+audio_filename = sys.argv[2]
 try:
     import cv2
     import numpy as np
@@ -83,7 +88,7 @@ try:
     # --no-video ensures only audio is played
     # --no-terminal prevents mpv from trying to read terminal input (which freezes it in the background)
     audio_process = subprocess.Popen(
-        ["mpv", "--no-video", "--no-terminal", video_filename],
+        ["mpv", "--no-video", "--no-terminal", audio_filename],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
@@ -129,15 +134,16 @@ finally:
     cap.release()
     sys.stdout.write("\033[?25h\033[2J\033[H")
     sys.stdout.flush()
-' "$OUTPUT_FILE"
+' "$OUTPUT_FILE" "$AUDIO_FILE"
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
     read -p "Playback finished. Do you want to delete the downloaded video file? (y/n) " DEL_CHOICE
     if [[ "$DEL_CHOICE" == "y" || "$DEL_CHOICE" == "Y" ]]; then
-        rm "$OUTPUT_FILE"
+        rm -f "$OUTPUT_FILE" "$AUDIO_FILE"
         echo "[*] Video deleted."
     else
+        rm -f "$AUDIO_FILE"
         echo "[*] Video kept at: $(pwd)/$OUTPUT_FILE"
     fi
 else
