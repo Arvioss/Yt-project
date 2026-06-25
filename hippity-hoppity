@@ -12,4 +12,15 @@ echo "[*] Installing mpv, yt-dlp, python, and ffmpeg..."
 pkg install -y mpv yt-dlp python ffmpeg
 
 echo ""
+echo "[*] Installing ytvidgo to your system..."
+if [ -n "$PREFIX" ]; then
+    cp ytvidgo $PREFIX/bin/
+    chmod +x $PREFIX/bin/ytvidgo
+else
+    mkdir -p ~/.local/bin
+    cp ytvidgo ~/.local/bin/
+    chmod +x ~/.local/bin/ytvidgo
+fi
+
+echo ""
 echo "[*] All done! You can now run 'ytvidgo' anywhere."
