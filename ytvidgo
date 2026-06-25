@@ -3,7 +3,7 @@
 # Clear the screen for a cleaner output
 clear
 echo "=============================================="
-echo "    Termux YouTube ASCII Player & Downloader  "
+echo "    Termux YouTube Player & Downloader        "
 echo "=============================================="
 echo ""
 
@@ -30,27 +30,26 @@ OUTPUT_FILE="yt_video_$(date +%s).mp4"
 
 echo ""
 echo "[*] Downloading video..."
-echo "[*] Note: We are fetching a lower resolution (480p or less) to save data,"
-echo "    since high-definition isn't needed for ASCII playback."
 echo ""
 
-# Download the video
-# We use a format string to prefer resolutions <= 480p that have both audio and video,
-# which saves bandwidth and prevents the need for complex merging.
-yt-dlp -f "best[height<=480]/best" -o "$OUTPUT_FILE" "$URL"
+# Download the video in best quality
+yt-dlp -o "$OUTPUT_FILE" "$URL"
 
 # Check if the download was successful
 if [ $? -eq 0 ]; then
     echo ""
     echo "[*] Download complete!"
-    echo "[*] Starting ASCII playback..."
-    echo "[*] Press 'q' at any time to quit the player."
+    echo "[*] Opening video in your native player..."
     sleep 2
     
-    # Play the video in ASCII
-    # --vo=tct is True Color Terminal output
-    # --profile=sw-fast helps with software decoding performance on Android
-    mpv --really-quiet --vo=tct --profile=sw-fast "$OUTPUT_FILE"
+    # Open the video using Android's native player (or Linux default)
+    if command -v termux-open &> /dev/null; then
+        termux-open "$OUTPUT_FILE"
+    elif command -v xdg-open &> /dev/null; then
+        xdg-open "$OUTPUT_FILE"
+    else
+        mpv "$OUTPUT_FILE"
+    fi
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
