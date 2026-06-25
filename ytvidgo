@@ -44,16 +44,9 @@ if [ $? -eq 0 ]; then
     echo "[*] Press 'q' at any time to quit."
     sleep 2
     
-    # Switch to an alternate screen buffer (like a new shell) and clear it
-    tput smcup
-    clear
-    
     # Play the video in the terminal using the 'caca' ASCII rendering engine.
-    # We force the ncurses driver so it doesn't try to open an X11 graphical window and fail.
+    # We force the ncurses driver so it automatically opens its own clean fullscreen canvas.
     CACA_DRIVER=ncurses mpv --really-quiet --vo=caca "$OUTPUT_FILE"
-    
-    # Restore the original terminal screen
-    tput rmcup
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
