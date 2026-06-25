@@ -3,7 +3,7 @@
 # Clear the screen for a cleaner output
 clear
 echo "=============================================="
-echo "    Termux YouTube Player & Downloader        "
+echo "    Termux YouTube Terminal Player            "
 echo "=============================================="
 echo ""
 
@@ -30,26 +30,30 @@ OUTPUT_FILE="yt_video_$(date +%s).mp4"
 
 echo ""
 echo "[*] Downloading video..."
+echo "[*] Note: Downloading a low resolution to play smoothly in terminal..."
 echo ""
 
-# Download the video in best quality
-yt-dlp -o "$OUTPUT_FILE" "$URL"
+# Download the video in lower quality for terminal playback
+yt-dlp -f "best[height<=480]/best" -o "$OUTPUT_FILE" "$URL"
 
 # Check if the download was successful
 if [ $? -eq 0 ]; then
     echo ""
     echo "[*] Download complete!"
-    echo "[*] Opening video in your native player..."
+    echo "[*] Starting terminal playback..."
+    echo "[*] Press 'q' at any time to quit."
     sleep 2
     
-    # Open the video using Android's native player (or Linux default)
-    if command -v termux-open &> /dev/null; then
-        termux-open "$OUTPUT_FILE"
-    elif command -v xdg-open &> /dev/null; then
-        xdg-open "$OUTPUT_FILE"
-    else
-        mpv "$OUTPUT_FILE"
+    # Get the terminal width so we can scale the video to fit the screen
+    TERMWIDTH=$(tput cols 2>/dev/null)
+    if [ -z "$TERMWIDTH" ] || [ "$TERMWIDTH" -lt 20 ]; then
+        TERMWIDTH=80
     fi
+    
+    # Play the video in the terminal
+    # We use a scale filter to shrink the video to exactly the terminal's width
+    # This prevents the "blank screen" issue caused by videos being too large for the terminal buffer
+    mpv --really-quiet --vo=tct --vf="scale=${TERMWIDTH}:-1" --profile=sw-fast "$OUTPUT_FILE"
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
