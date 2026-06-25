@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Clear the screen for a cleaner output
+clear
+echo "=============================================="
+echo "    Termux YouTube ASCII Player & Downloader  "
+echo "=============================================="
+echo ""
+
+# Check if required tools are installed
+if ! command -v yt-dlp &> /dev/null || ! command -v mpv &> /dev/null; then
+    echo "[!] Error: 'yt-dlp' or 'mpv' is not installed."
+    echo "Please install the required dependencies by running:"
+    echo "    hippity-hoppity"
+    exit 1
+fi
+
+# Ask the user for the URL
+read -p "Enter the YouTube URL: " URL
+
+# Exit if no URL was provided
+if [ -z "$URL" ]; then
+    echo "[!] No URL provided. Exiting."
+    exit 1
+fi
+
+# Define the output filename
+# We use .mp4 extension as a general container
+OUTPUT_FILE="yt_video_$(date +%s).mp4"
+
+echo ""
+echo "[*] Downloading video..."
+echo "[*] Note: We are fetching a lower resolution (480p or less) to save data,"
+echo "    since high-definition isn't needed for ASCII playback."
+echo ""
+
+# Download the video
+# We use a format string to prefer resolutions <= 480p that have both audio and video,
+# which saves bandwidth and prevents the need for complex merging.
+yt-dlp -f "best[height<=480]/best" -o "$OUTPUT_FILE" "$URL"
+
+# Check if the download was successful
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "[*] Download complete!"
+    echo "[*] Starting ASCII playback..."
+    echo "[*] Press 'q' at any time to quit the player."
+    sleep 2
+    
+    # Play the video in ASCII
+    # --vo=tct is True Color Terminal output
+    # --profile=sw-fast helps with software decoding performance on Android
+    mpv --vo=tct --profile=sw-fast "$OUTPUT_FILE"
+    
+    # After playback finishes, ask if the user wants to keep the file
+    echo ""
+    read -p "Playback finished. Do you want to delete the downloaded video file? (y/n) " DEL_CHOICE
+    if [[ "$DEL_CHOICE" == "y" || "$DEL_CHOICE" == "Y" ]]; then
+        rm "$OUTPUT_FILE"
+        echo "[*] Video deleted."
+    else
+        echo "[*] Video kept at: $(pwd)/$OUTPUT_FILE"
+    fi
+else
+    echo ""
+    echo "[!] Download failed. Please check the URL and your internet connection."
+    exit 1
+fi

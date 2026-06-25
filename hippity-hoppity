@@ -1,0 +1,15 @@
+#!/bin/bash
+clear
+echo "=============================================="
+echo "    Downloading Dependencies for ytvidgo      "
+echo "=============================================="
+echo ""
+echo "[*] Updating package lists..."
+pkg update -y
+
+echo ""
+echo "[*] Installing mpv, yt-dlp, python, and ffmpeg..."
+pkg install -y mpv yt-dlp python ffmpeg
+
+echo ""
+echo "[*] All done! You can now run 'ytvidgo' anywhere."
