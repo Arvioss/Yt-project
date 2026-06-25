@@ -50,7 +50,7 @@ if [ $? -eq 0 ]; then
     # Play the video in ASCII
     # --vo=tct is True Color Terminal output
     # --profile=sw-fast helps with software decoding performance on Android
-    mpv --vo=tct --profile=sw-fast "$OUTPUT_FILE"
+    mpv --really-quiet --vo=tct --profile=sw-fast "$OUTPUT_FILE"
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
