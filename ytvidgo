@@ -44,10 +44,15 @@ if [ $? -eq 0 ]; then
     echo "[*] Press 'q' at any time to quit."
     sleep 2
     
+    # Switch to an alternate screen buffer (like a new shell) and clear it
+    tput smcup
+    clear
+    
     # Play the video in the terminal using the 'caca' ASCII rendering engine.
-    # libcaca automatically creates a clean, full-screen canvas (hiding the shell text)
-    # and restores the terminal properly once you press 'q' to quit.
     mpv --quiet --vo=caca "$OUTPUT_FILE"
+    
+    # Restore the original terminal screen
+    tput rmcup
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
