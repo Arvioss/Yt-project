@@ -8,8 +8,8 @@ echo "[*] Updating package lists..."
 pkg update -y
 
 echo ""
-echo "[*] Installing yt-dlp, ffmpeg, and termux-api..."
-pkg install -y yt-dlp ffmpeg termux-api
+echo "[*] Installing yt-dlp, ffmpeg, termux-api, and python..."
+pkg install -y yt-dlp ffmpeg termux-api python
 
 echo "[*] Installing ytvidgo to your system..."
 if [ -n "$PREFIX" ]; then

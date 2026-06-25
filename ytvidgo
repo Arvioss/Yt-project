@@ -8,8 +8,8 @@ echo "=============================================="
 echo ""
 
 # Check if required tools are installed
-if ! command -v yt-dlp &> /dev/null || ! command -v termux-open &> /dev/null || ! command -v ffmpeg &> /dev/null; then
-    echo "[!] Error: 'yt-dlp', 'termux-api', or 'ffmpeg' is not installed."
+if ! command -v yt-dlp &> /dev/null || ! command -v termux-media-player &> /dev/null || ! command -v ffmpeg &> /dev/null || ! command -v python3 &> /dev/null; then
+    echo "[!] Error: 'yt-dlp', 'termux-api', 'ffmpeg', or 'python3' is not installed."
     echo "Please install the required dependencies by running:"
     echo "    ./hippity-hoppity"
     exit 1
@@ -24,38 +24,124 @@ if [ -z "$URL" ]; then
     exit 1
 fi
 
-# Define the output filename
-# We use .mp4 extension as a general container
-OUTPUT_FILE="yt_video_$(date +%s).mp4"
+# Define the output base filename
+BASE_NAME="yt_dl_$(date +%s)"
 
 echo ""
-echo "[*] Downloading video..."
-echo "[*] Note: Downloading video in mp4 format..."
+echo "[*] Downloading video and audio as separate files..."
 echo ""
 
-# Download the video
-yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -o "$OUTPUT_FILE" "$URL"
+# Download the video and audio streams separately
+yt-dlp -f "bestvideo[height<=480][ext=mp4],bestaudio[ext=m4a]" -o "${BASE_NAME}_%(ext)s" "$URL"
 
 # Check if the download was successful
 if [ $? -eq 0 ]; then
+    # Find the actual downloaded files
+    VIDEO_FILE=$(ls ${BASE_NAME}_*.mp4 2>/dev/null | head -n 1)
+    AUDIO_FILE=$(ls ${BASE_NAME}_*.m4a 2>/dev/null | head -n 1)
+    
+    if [ -z "$VIDEO_FILE" ] || [ -z "$AUDIO_FILE" ]; then
+        echo "[!] Error: Could not find the downloaded video or audio file."
+        exit 1
+    fi
+
     echo ""
     echo "[*] Download complete!"
-    echo "[*] Opening video in Android's native player..."
+    echo "[*] Starting terminal playback... Press 'Ctrl+C' at any time to quit."
+    sleep 2
     
-    # Open the video using termux-api
-    termux-open "$OUTPUT_FILE"
+    # Start audio playback in the background using Termux API
+    termux-media-player play "$AUDIO_FILE" > /dev/null 2>&1
     
+    # Ensure audio is stopped if the script is interrupted
+    trap "termux-media-player stop > /dev/null 2>&1" EXIT INT TERM
+    
+    # Play the video in the terminal using FFmpeg to decode and Python to map to ASCII
+    python3 -c '
+import sys
+import subprocess
+import os
+
+video_file = sys.argv[1]
+
+# Get terminal dimensions
+try:
+    cols, lines = os.get_terminal_size()
+except OSError:
+    cols, lines = 80, 24
+
+# Extract aspect ratio using ffprobe
+try:
+    ffprobe_cmd = ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", video_file]
+    output = subprocess.check_output(ffprobe_cmd).decode("utf-8").strip()
+    v_w, v_h = map(int, output.split(","))
+except Exception:
+    v_w, v_h = 16, 9
+
+aspect_ratio = v_h / v_w
+# Multiply by 0.5 because terminal characters are roughly twice as tall as they are wide
+target_height = int(cols * aspect_ratio * 0.5)
+
+if target_height > lines:
+    target_height = lines
+    cols = int(target_height / 0.5 / aspect_ratio)
+
+width, height = cols, target_height
+frame_size = width * height
+
+ASCII_CHARS = [" ", ".", ":", "-", "=", "+", "*", "#", "%", "@"]
+
+# Run ffmpeg to decode frames in real-time (-re), output as raw grayscale bytes
+ffmpeg_cmd = [
+    "ffmpeg",
+    "-re", 
+    "-i", video_file,
+    "-vcodec", "rawvideo",
+    "-pix_fmt", "gray",
+    "-s", f"{width}x{height}",
+    "-f", "image2pipe",
+    "-"
+]
+
+process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+sys.stdout.write("\033[?25l\033[2J")
+sys.stdout.flush()
+
+try:
+    while True:
+        raw_frame = process.stdout.read(frame_size)
+        if not raw_frame or len(raw_frame) != frame_size:
+            break
+        
+        # Map grayscale bytes (0-255) to ASCII chars
+        ascii_frame = "".join(ASCII_CHARS[b * len(ASCII_CHARS) // 256] for b in raw_frame)
+        
+        # Group into rows and print
+        output = "\033[H" + "\n".join(ascii_frame[i*width : (i+1)*width] for i in range(height))
+        sys.stdout.write(output)
+        sys.stdout.flush()
+except KeyboardInterrupt:
+    pass
+finally:
+    process.kill()
+    sys.stdout.write("\033[?25h\033[2J\033[H")
+    sys.stdout.flush()
+' "$VIDEO_FILE"
+    
+    # Stop the background audio playback now that video is done
+    termux-media-player stop > /dev/null 2>&1
+    trap - EXIT INT TERM
+    
+    # After playback finishes, ask if the user wants to keep the files
     echo ""
-    read -p "Press [Enter] after you have finished watching to proceed..."
-    
-    # After playback finishes, ask if the user wants to keep the file
-    echo ""
-    read -p "Playback finished. Do you want to delete the downloaded video file? (y/n) " DEL_CHOICE
+    read -p "Playback finished. Do you want to delete the downloaded files? (y/n) " DEL_CHOICE
     if [[ "$DEL_CHOICE" == "y" || "$DEL_CHOICE" == "Y" ]]; then
-        rm -f "$OUTPUT_FILE"
-        echo "[*] Video deleted."
+        rm -f "$VIDEO_FILE" "$AUDIO_FILE"
+        echo "[*] Files deleted."
     else
-        echo "[*] Video kept at: $(pwd)/$OUTPUT_FILE"
+        echo "[*] Video kept at: $(pwd)/$VIDEO_FILE"
+        echo "[*] Audio kept at: $(pwd)/$AUDIO_FILE"
     fi
 else
     echo ""
