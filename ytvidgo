@@ -44,23 +44,10 @@ if [ $? -eq 0 ]; then
     echo "[*] Press 'q' at any time to quit."
     sleep 2
     
-    # Get the terminal width so we can scale the video to fit the screen
-    TERMWIDTH=$(tput cols 2>/dev/null)
-    if [ -z "$TERMWIDTH" ] || [ "$TERMWIDTH" -lt 20 ]; then
-        TERMWIDTH=80
-    fi
-    
-    # Switch to an alternate screen buffer (like a new shell) and clear it
-    tput smcup
-    clear
-    
-    # Play the video in the terminal
-    # We use a scale filter to shrink the video to exactly the terminal's width
-    # This prevents the "blank screen" issue caused by videos being too large for the terminal buffer
-    mpv --really-quiet --vo=tct --vf="scale=${TERMWIDTH}:-1" --profile=sw-fast "$OUTPUT_FILE"
-    
-    # Restore the original terminal screen
-    tput rmcup
+    # Play the video in the terminal using the 'caca' ASCII rendering engine.
+    # libcaca automatically creates a clean, full-screen canvas (hiding the shell text)
+    # and restores the terminal properly once you press 'q' to quit.
+    mpv --quiet --vo=caca "$OUTPUT_FILE"
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""

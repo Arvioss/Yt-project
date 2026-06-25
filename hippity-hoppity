@@ -8,8 +8,8 @@ echo "[*] Updating package lists..."
 pkg update -y
 
 echo ""
-echo "[*] Installing mpv, yt-dlp, python, and ffmpeg..."
-pkg install -y mpv yt-dlp python ffmpeg
+echo "[*] Installing mpv, yt-dlp, python, libcaca, and ffmpeg..."
+pkg install -y mpv yt-dlp python ffmpeg libcaca
 
 echo ""
 echo "[*] Installing ytvidgo to your system..."
