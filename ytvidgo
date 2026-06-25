@@ -41,7 +41,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "[*] Download complete!"
     echo "[*] Starting terminal playback..."
-    echo "[*] Press 'q' at any time to quit."
+    echo "[*] Press 'Ctrl+C' at any time to quit."
     sleep 2
     
     # Play the video in the terminal using the custom Python ASCII engine (based on bad-apple)
@@ -81,8 +81,10 @@ width = min(columns, 100)
 audio_process = None
 try:
     # --no-video ensures only audio is played
+    # --no-terminal prevents mpv from trying to read terminal input (which freezes it in the background)
     audio_process = subprocess.Popen(
-        ["mpv", "--no-video", video_filename],
+        ["mpv", "--no-video", "--no-terminal", video_filename],
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
