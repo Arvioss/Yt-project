@@ -8,12 +8,9 @@ echo "[*] Updating package lists..."
 pkg update -y
 
 echo ""
-echo "[*] Installing mpv, yt-dlp, python, and ffmpeg..."
-pkg install -y mpv yt-dlp python ffmpeg
+echo "[*] Installing yt-dlp, ffmpeg, and termux-api..."
+pkg install -y yt-dlp ffmpeg termux-api
 
-echo ""
-echo "[*] Installing Python dependencies (opencv-python, numpy)..."
-pip install opencv-python numpy
 echo "[*] Installing ytvidgo to your system..."
 if [ -n "$PREFIX" ]; then
     cp ytvidgo $PREFIX/bin/

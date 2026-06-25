@@ -8,10 +8,10 @@ echo "=============================================="
 echo ""
 
 # Check if required tools are installed
-if ! command -v yt-dlp &> /dev/null || ! command -v mpv &> /dev/null; then
-    echo "[!] Error: 'yt-dlp' or 'mpv' is not installed."
+if ! command -v yt-dlp &> /dev/null || ! command -v termux-open &> /dev/null || ! command -v ffmpeg &> /dev/null; then
+    echo "[!] Error: 'yt-dlp', 'termux-api', or 'ffmpeg' is not installed."
     echo "Please install the required dependencies by running:"
-    echo "    hippity-hoppity"
+    echo "    ./hippity-hoppity"
     exit 1
 fi
 
@@ -30,120 +30,31 @@ OUTPUT_FILE="yt_video_$(date +%s).mp4"
 
 echo ""
 echo "[*] Downloading video..."
-echo "[*] Note: Downloading a low resolution to play smoothly in terminal..."
+echo "[*] Note: Downloading video in mp4 format..."
 echo ""
 
-# Download the video in lower quality for terminal playback
-yt-dlp -f "best[height<=480]/best" -o "$OUTPUT_FILE" "$URL"
+# Download the video
+yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -o "$OUTPUT_FILE" "$URL"
 
 # Check if the download was successful
 if [ $? -eq 0 ]; then
     echo ""
     echo "[*] Download complete!"
-    echo "[*] Preparing audio track..."
-    AUDIO_FILE="yt_audio_$(date +%s).mka"
-    ffmpeg -i "$OUTPUT_FILE" -vn -c:a copy "$AUDIO_FILE" -y -v quiet
+    echo "[*] Opening video in Android's native player..."
     
-    echo "[*] Starting terminal playback..."
-    echo "[*] Press 'Ctrl+C' at any time to quit."
-    sleep 2
+    # Open the video using termux-api
+    termux-open "$OUTPUT_FILE"
     
-    # Play the video in the terminal using the custom Python ASCII engine (based on bad-apple)
-    python3 -c '
-import os
-import time
-import sys
-import subprocess
-
-ASCII_CHARS = [" ", ".", ":", "-", "=", "+", "*", "#", "%", "@"]
-
-video_filename = sys.argv[1]
-audio_filename = sys.argv[2]
-try:
-    import cv2
-    import numpy as np
-except ImportError:
-    print("Please install opencv-python and numpy (pip install opencv-python numpy).")
-    sys.exit(1)
-
-cap = cv2.VideoCapture(video_filename)
-if not cap.isOpened():
-    print(f"Error: Could not open video file {video_filename}")
-    sys.exit(1)
-
-fps = cap.get(cv2.CAP_PROP_FPS)
-if fps == 0: fps = 30
-frame_duration = 1 / fps
-
-try:
-    columns, lines = os.get_terminal_size()
-except OSError:
-    columns, lines = 80, 24
-
-width = min(columns, 100)
-
-# Initialize audio with mpv
-audio_process = None
-try:
-    # --no-video ensures only audio is played
-    # --no-terminal prevents mpv from trying to read terminal input (which freezes it in the background)
-    audio_process = subprocess.Popen(
-        ["mpv", "--no-video", "--no-terminal", audio_filename],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-except Exception as e:
-    pass
-
-sys.stdout.write("\033[?25l\033[2J")
-sys.stdout.flush()
-
-try:
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        start_time = time.time()
-        
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
-        h, w = gray.shape
-        aspect_ratio = h / w
-        target_height = int(width * aspect_ratio * 0.5)
-        resized = cv2.resize(gray, (width, target_height))
-        
-        indices = (resized.astype(float) / 255 * (len(ASCII_CHARS) - 1)).astype(int)
-        ascii_lines = ["".join([ASCII_CHARS[i] for i in row]) for row in indices]
-        
-        output = "\033[H" + "\n".join(ascii_lines)
-        sys.stdout.write(output)
-        sys.stdout.flush()
-        
-        elapsed = time.time() - start_time
-        if elapsed < frame_duration:
-            time.sleep(frame_duration - elapsed)
-
-except KeyboardInterrupt:
-    pass
-finally:
-    if audio_process:
-        audio_process.terminate()
-        audio_process.wait()
-    cap.release()
-    sys.stdout.write("\033[?25h\033[2J\033[H")
-    sys.stdout.flush()
-' "$OUTPUT_FILE" "$AUDIO_FILE"
+    echo ""
+    read -p "Press [Enter] after you have finished watching to proceed..."
     
     # After playback finishes, ask if the user wants to keep the file
     echo ""
     read -p "Playback finished. Do you want to delete the downloaded video file? (y/n) " DEL_CHOICE
     if [[ "$DEL_CHOICE" == "y" || "$DEL_CHOICE" == "Y" ]]; then
-        rm -f "$OUTPUT_FILE" "$AUDIO_FILE"
+        rm -f "$OUTPUT_FILE"
         echo "[*] Video deleted."
     else
-        rm -f "$AUDIO_FILE"
         echo "[*] Video kept at: $(pwd)/$OUTPUT_FILE"
     fi
 else
