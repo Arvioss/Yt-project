@@ -49,7 +49,8 @@ if [ $? -eq 0 ]; then
     clear
     
     # Play the video in the terminal using the 'caca' ASCII rendering engine.
-    mpv --quiet --vo=caca "$OUTPUT_FILE"
+    # We force the ncurses driver so it doesn't try to open an X11 graphical window and fail.
+    CACA_DRIVER=ncurses mpv --really-quiet --vo=caca "$OUTPUT_FILE"
     
     # Restore the original terminal screen
     tput rmcup
